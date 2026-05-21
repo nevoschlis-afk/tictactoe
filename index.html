@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>איקס עיגול</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0d14; --surface:#13131e; --surface2:#1a1a28;
+    --border:#252538; --border2:#2e2e48;
+    --x-color:#ff4d6d; --o-color:#4cc9f0;
+    --x-glow:rgba(255,77,109,0.35); --o-glow:rgba(76,201,240,0.35);
+    --text:#e8e8f0; --muted:#555570; --accent:#7c3aed;
+    --green:#06d6a0; --yellow:#ffd166;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:var(--bg);color:var(--text);font-family:'Rubik',sans-serif;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    overflow:hidden;position:relative;
+  }
+  body::before,body::after{
+    content:'';position:fixed;border-radius:50%;filter:blur(130px);pointer-events:none;z-index:0;opacity:0.6;
+  }
+  body::before{width:480px;height:480px;background:rgba(255,77,109,0.18);top:-160px;right:-120px;animation:drift1 10s ease-in-out infinite alternate;}
+  body::after {width:420px;height:420px;background:rgba(76,201,240,0.15);bottom:-130px;left:-100px;animation:drift2 12s ease-in-out infinite alternate;}
+  @keyframes drift1{from{transform:translate(0,0)}to{transform:translate(35px,45px)}}
+  @keyframes drift2{from{transform:translate(0,0)}to{transform:translate(-25px,-40px)}}
+
+  #confettiCanvas{position:fixed;inset:0;pointer-events:none;z-index:200;}
+
+  .screen{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;}
+  .screen.hidden{display:none;}
+
+  /* SPLASH */
+  .splash-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+  .splash-bg svg{width:min(92vw,92vh);height:min(92vw,92vh);opacity:0.09;}
+  .splash-title{position:relative;z-index:1;text-align:center;}
+  .splash-title h1{font-size:3.2rem;font-weight:900;letter-spacing:-2px;background:linear-gradient(135deg,var(--x-color),#c77dff,var(--o-color));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .splash-title p{font-size:0.78rem;color:var(--muted);letter-spacing:5px;text-transform:uppercase;margin-top:8px;}
+  .play-btn{padding:22px 60px;border-radius:60px;border:2px solid rgba(192,132,252,0.35);background:linear-gradient(145deg,rgba(124,58,237,0.35),rgba(168,85,247,0.2));cursor:pointer;font-family:'Rubik',sans-serif;font-size:2rem;font-weight:900;letter-spacing:8px;color:#ede8ff;text-transform:uppercase;transition:all 0.25s cubic-bezier(0.34,1.56,0.64,1);animation:pulseBtn 2.6s ease-in-out infinite;position:relative;z-index:1;}
+  .play-btn:hover{transform:scale(1.08);letter-spacing:10px;}
+  .play-btn:active{transform:scale(0.97);}
+  @keyframes pulseBtn{0%,100%{box-shadow:0 0 30px rgba(124,58,237,0.3),0 0 60px rgba(124,58,237,0.12)}50%{box-shadow:0 0 55px rgba(124,58,237,0.55),0 0 100px rgba(124,58,237,0.22)}}
+
+  /* MODE */
+  .screen-title{text-align:center;font-size:1.7rem;font-weight:900;background:linear-gradient(135deg,var(--x-color),#c77dff,var(--o-color));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .screen-sub{font-size:0.8rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:-18px;}
+  .mode-btns{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;}
+  .mode-btn{width:140px;height:150px;border-radius:22px;border:2px solid var(--border);background:var(--surface);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-family:'Rubik',sans-serif;color:var(--text);transition:all 0.22s cubic-bezier(0.34,1.56,0.64,1);}
+  .mode-btn .icon{font-size:2.6rem;line-height:1;}
+  .mode-btn .label{font-size:0.92rem;font-weight:700;}
+  .mode-btn.x-mode:hover{border-color:var(--x-color);box-shadow:0 0 28px var(--x-glow);transform:translateY(-5px) scale(1.03);}
+  .mode-btn.o-mode:hover{border-color:var(--o-color);box-shadow:0 0 28px var(--o-glow);transform:translateY(-5px) scale(1.03);}
+  .mode-btn.friend-mode:hover{border-color:var(--green);box-shadow:0 0 28px rgba(6,214,160,0.3);transform:translateY(-5px) scale(1.03);}
+  .mode-btn:active{transform:scale(0.96);}
+
+  /* DIFFICULTY */
+  .diff-btns{display:flex;flex-direction:column;gap:13px;width:285px;}
+  .diff-btn{padding:17px 20px;border-radius:16px;border:2px solid var(--border);background:var(--surface);cursor:pointer;display:flex;align-items:center;gap:15px;font-family:'Rubik',sans-serif;color:var(--text);transition:all 0.22s cubic-bezier(0.34,1.56,0.64,1);}
+  .diff-btn .diff-icon{font-size:1.9rem;flex-shrink:0;}
+  .diff-btn .diff-name{font-size:1rem;font-weight:900;display:block;}
+  .diff-btn .diff-desc{font-size:0.68rem;color:var(--muted);display:block;margin-top:2px;}
+  .diff-btn.easy:hover{border-color:var(--green);box-shadow:0 0 22px rgba(6,214,160,0.3);transform:translateX(-5px);}
+  .diff-btn.medium:hover{border-color:var(--yellow);box-shadow:0 0 22px rgba(255,209,102,0.3);transform:translateX(-5px);}
+  .diff-btn.hard:hover{border-color:var(--x-color);box-shadow:0 0 22px var(--x-glow);transform:translateX(-5px);}
+  .diff-btn:active{transform:scale(0.97);}
+  .diff-btn.easy .diff-name{color:var(--green);}
+  .diff-btn.medium .diff-name{color:var(--yellow);}
+  .diff-btn.hard .diff-name{color:var(--x-color);}
+  .back-btn{padding:10px 26px;border-radius:50px;border:1.5px solid var(--border);background:transparent;color:var(--muted);font-family:'Rubik',sans-serif;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;}
+  .back-btn:hover{border-color:var(--muted);color:var(--text);}
+
+  /* FRIEND */
+  .friend-box{background:var(--surface);border:2px solid var(--border);border-radius:24px;padding:20px 18px;width:min(320px,92vw);display:flex;flex-direction:column;gap:14px;}
+  .friend-section{display:flex;flex-direction:column;gap:8px;}
+  .friend-section-title{font-size:0.72rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;}
+  .code-display{background:var(--surface2);border:2px solid var(--border2);border-radius:14px;padding:12px;text-align:center;font-size:1.9rem;font-weight:900;letter-spacing:10px;color:var(--green);cursor:pointer;transition:all 0.2s;}
+  .code-display:hover{border-color:var(--green);}
+  .code-copy-hint{font-size:0.65rem;color:var(--muted);text-align:center;margin-top:-4px;}
+  .code-input{width:100%;background:var(--surface2);border:2px solid var(--border2);border-radius:14px;padding:14px 10px;font-size:1.6rem;font-weight:700;letter-spacing:8px;color:var(--text);font-family:'Rubik',sans-serif;text-align:center;outline:none;transition:border-color 0.2s;}
+  .code-input:focus{border-color:var(--o-color);}
+  .code-input::placeholder{color:var(--muted);font-size:0.9rem;letter-spacing:2px;}
+  .join-btn{padding:14px 20px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--o-color),#0ea5e9);color:#000;font-family:'Rubik',sans-serif;font-size:0.9rem;font-weight:700;cursor:pointer;transition:all 0.2s;width:100%;}
+  .join-btn:hover{transform:scale(1.03);opacity:0.9;}
+  .join-btn.green-btn{background:linear-gradient(135deg,var(--green),#059669);color:#000;}
+  .divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:0.75rem;}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+  .waiting-msg{text-align:center;font-size:0.88rem;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;}
+  .dot-anim span{animation:dotPulse 1.4s infinite;}
+  .dot-anim span:nth-child(2){animation-delay:0.2s;}
+  .dot-anim span:nth-child(3){animation-delay:0.4s;}
+  @keyframes dotPulse{0%,80%,100%{opacity:0.2}40%{opacity:1}}
+  .error-msg{text-align:center;font-size:0.82rem;color:var(--x-color);background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);border-radius:10px;padding:8px 12px;display:none;}
+  .error-msg.show{display:block;}
+
+  /* GAME */
+  .container{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:16px;padding:16px;width:100%;max-width:420px;}
+  .header{text-align:center;}
+  .title{font-size:2rem;font-weight:900;letter-spacing:-1px;background:linear-gradient(135deg,var(--x-color),#c77dff,var(--o-color));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .subtitle{font-size:0.72rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:3px;}
+  .game-badge{display:inline-block;margin-top:5px;padding:3px 12px;border-radius:20px;font-size:0.66rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+  .game-badge.ai-badge{border:1px solid rgba(124,58,237,0.4);color:#c084fc;background:rgba(124,58,237,0.12);}
+  .game-badge.friend-badge{border:1px solid rgba(6,214,160,0.4);color:var(--green);background:rgba(6,214,160,0.1);}
+
+  /* TIMER */
+  .timer-wrap{width:100%;height:6px;background:var(--border);border-radius:6px;overflow:hidden;display:none;}
+  .timer-bar{height:100%;width:100%;border-radius:6px;transition:width 1s linear,background 1s linear;background:var(--green);}
+
+  .scoreboard{display:flex;gap:10px;width:100%;}
+  .score-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:11px;text-align:center;transition:border-color 0.3s,box-shadow 0.3s;}
+  .score-card.x-card{border-color:color-mix(in srgb,var(--x-color) 30%,transparent);}
+  .score-card.o-card{border-color:color-mix(in srgb,var(--o-color) 30%,transparent);}
+  .score-card.active-x{border-color:var(--x-color);box-shadow:0 0 18px var(--x-glow);}
+  .score-card.active-o{border-color:var(--o-color);box-shadow:0 0 18px var(--o-glow);}
+  .score-card.draw-card{flex:0.65;border-color:var(--border);}
+  .score-label{font-size:0.58rem;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;}
+  .score-symbol{font-size:1.1rem;font-weight:900;display:block;margin-bottom:2px;}
+  .score-card.x-card .score-symbol{color:var(--x-color);}
+  .score-card.o-card .score-symbol{color:var(--o-color);}
+  .score-card.draw-card .score-symbol{color:var(--muted);}
+  .score-num{font-size:1.5rem;font-weight:900;display:block;}
+
+  .status{font-size:0.95rem;font-weight:500;min-height:24px;text-align:center;}
+  .status .highlight-x{color:var(--x-color);font-weight:700;}
+  .status .highlight-o{color:var(--o-color);font-weight:700;}
+
+  /* GRID & WIN LINE */
+  .grid-wrapper{position:relative;}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:13px;background:var(--surface);border:1px solid var(--border);border-radius:22px;position:relative;}
+  .cell{width:98px;height:98px;background:var(--bg);border:1.5px solid var(--border);border-radius:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:2.7rem;font-weight:900;transition:all 0.2s ease;position:relative;overflow:hidden;}
+  .cell.o-cell{font-size:3.8rem;}
+  .cell::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.2s;}
+  .cell:not(.taken):hover{border-color:var(--muted);transform:scale(1.04);}
+  .cell:not(.taken):hover::before{opacity:1;background:radial-gradient(circle at center,rgba(255,255,255,0.03),transparent 70%);}
+  .cell.x-cell{color:var(--x-color);border-color:color-mix(in srgb,var(--x-color) 40%,transparent);background:color-mix(in srgb,var(--x-color) 6%,var(--bg));animation:popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both;}
+  .cell.o-cell{color:var(--o-color);border-color:color-mix(in srgb,var(--o-color) 40%,transparent);background:color-mix(in srgb,var(--o-color) 6%,var(--bg));animation:popIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both;}
+  .cell.win-cell.x-cell{border-color:var(--x-color);box-shadow:0 0 22px var(--x-glow),inset 0 0 22px var(--x-glow);animation:winPulse 0.6s cubic-bezier(0.34,1.56,0.64,1) both;}
+  .cell.win-cell.o-cell{border-color:var(--o-color);box-shadow:0 0 22px var(--o-glow),inset 0 0 22px var(--o-glow);animation:winPulse 0.6s cubic-bezier(0.34,1.56,0.64,1) both;}
+  .cell.taken{cursor:default;}
+  .turn-x .cell:not(.taken):hover::after{content:'✕';color:var(--x-color);font-size:2rem;font-weight:900;opacity:0.3;}
+  .turn-o .cell:not(.taken):hover::after{content:'○';color:var(--o-color);font-size:3.2rem;font-weight:900;opacity:0.3;}
+
+  /* WIN LINE SVG */
+  .win-line-svg{position:absolute;inset:0;pointer-events:none;z-index:10;border-radius:22px;overflow:visible;}
+  .win-line-svg line{stroke-width:6;stroke-linecap:round;opacity:0;transition:opacity 0.2s;}
+  .win-line-svg line.show{opacity:1;animation:drawLine 0.4s ease both;}
+  @keyframes drawLine{from{stroke-dashoffset:400}to{stroke-dashoffset:0}}
+
+  @keyframes popIn{from{transform:scale(0.5);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes winPulse{0%{transform:scale(1)}40%{transform:scale(1.12)}70%{transform:scale(0.96)}100%{transform:scale(1.05)}}
+
+  .win-banner{position:absolute;top:-60px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:50px;padding:10px 24px;font-weight:700;font-size:1rem;white-space:nowrap;opacity:0;pointer-events:none;transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+  .win-banner.show{opacity:1;top:-50px;}
+  .win-banner.x{color:var(--x-color);border-color:var(--x-color);box-shadow:0 0 18px var(--x-glow);}
+  .win-banner.o{color:var(--o-color);border-color:var(--o-color);box-shadow:0 0 18px var(--o-glow);}
+
+  /* EMOJI CHAT */
+  .emoji-bar{display:none;gap:8px;justify-content:center;width:100%;}
+  .emoji-bar.show{display:flex;}
+  .emoji-btn{
+    width:44px;height:44px;border-radius:50%;border:1.5px solid var(--border);
+    background:var(--surface);font-size:1.3rem;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all 0.2s;position:relative;
+  }
+  .emoji-btn:hover{transform:scale(1.15);border-color:var(--border2);}
+  .emoji-btn:active{transform:scale(0.95);}
+  .emoji-toast{
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);
+    font-size:4rem;z-index:300;pointer-events:none;
+    animation:toastPop 1.8s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  }
+  @keyframes toastPop{
+    0%{transform:translate(-50%,-50%) scale(0);opacity:1}
+    30%{transform:translate(-50%,-60%) scale(1.2);opacity:1}
+    70%{transform:translate(-50%,-65%) scale(1);opacity:1}
+    100%{transform:translate(-50%,-80%) scale(0.8);opacity:0}
+  }
+
+  .buttons{display:flex;gap:0;width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;}
+  .btn{flex:1;padding:12px;border:none;background:transparent;color:var(--text);font-family:'Rubik',sans-serif;font-size:0.78rem;font-weight:600;cursor:pointer;transition:all 0.2s;}
+  .btn:hover{background:var(--border);}
+  .btn:active{opacity:0.7;}
+  .btn-divider{width:1.5px;background:var(--border);flex-shrink:0;}
+  .btn.clear-btn{color:#c084fc;}
+  .btn.home-btn{color:var(--muted);}
+
+  @media(max-width:380px){
+    .cell{width:84px;height:84px;font-size:2.3rem;}
+    .play-btn{font-size:1.5rem;padding:18px 40px;}
+    .mode-btn{width:120px;height:135px;}
+    .friend-box{width:290px;padding:18px 14px;}
+  }
+</style>
+</head>
+<body>
+<canvas id="confettiCanvas"></canvas>
+
+<!-- SPLASH -->
+<div class="screen" id="splashScreen">
+  <div class="splash-bg">
+    <svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+      <line x1="100" y1="10" x2="100" y2="290" stroke="white" stroke-width="6" stroke-linecap="round"/>
+      <line x1="200" y1="10" x2="200" y2="290" stroke="white" stroke-width="6" stroke-linecap="round"/>
+      <line x1="10" y1="100" x2="290" y2="100" stroke="white" stroke-width="6" stroke-linecap="round"/>
+      <line x1="10" y1="200" x2="290" y2="200" stroke="white" stroke-width="6" stroke-linecap="round"/>
+      <line x1="22" y1="22" x2="78" y2="78" stroke="#ff4d6d" stroke-width="10" stroke-linecap="round"/>
+      <line x1="78" y1="22" x2="22" y2="78" stroke="#ff4d6d" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="150" cy="50" r="28" stroke="#4cc9f0" stroke-width="9" fill="none"/>
+      <line x1="222" y1="22" x2="278" y2="78" stroke="#ff4d6d" stroke-width="10" stroke-linecap="round"/>
+      <line x1="278" y1="22" x2="222" y2="78" stroke="#ff4d6d" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="50" cy="150" r="28" stroke="#4cc9f0" stroke-width="9" fill="none"/>
+      <line x1="122" y1="122" x2="178" y2="178" stroke="#ff4d6d" stroke-width="10" stroke-linecap="round"/>
+      <line x1="178" y1="122" x2="122" y2="178" stroke="#ff4d6d" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="250" cy="150" r="28" stroke="#4cc9f0" stroke-width="9" fill="none"/>
+      <line x1="22" y1="222" x2="78" y2="278" stroke="#ff4d6d" stroke-width="10" stroke-linecap="round"/>
+      <line x1="78" y1="222" x2="22" y2="278" stroke="#ff4d6d" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="150" cy="250" r="28" stroke="#4cc9f0" stroke-width="9" fill="none"/>
+      <line x1="222" y1="222" x2="278" y2="278" stroke="#ff4d6d" stroke-width="10" stroke-linecap="round"/>
+      <line x1="278" y1="222" x2="222" y2="278" stroke="#ff4d6d" stroke-width="10" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="splash-title"><h1>איקס עיגול</h1><p>משחק אסטרטגי</p></div>
+  <button class="play-btn" id="playBtn">PLAY</button>
+</div>
+
+<!-- MODE -->
+<div class="screen hidden" id="modeScreen">
+  <div class="screen-title">בחרו מצב משחק</div>
+  <div class="screen-sub">כיצד תרצו לשחק?</div>
+  <div class="mode-btns">
+    <button class="mode-btn x-mode" id="btn1P"><span class="icon">🤖</span><span class="label">שחקן 1</span></button>
+    <button class="mode-btn o-mode" id="btn2P"><span class="icon">👥</span><span class="label">2 שחקנים</span></button>
+    <button class="mode-btn friend-mode" id="btnFriend"><span class="icon">🌐</span><span class="label">משחק ידידות</span></button>
+  </div>
+</div>
+
+<!-- DIFFICULTY -->
+<div class="screen hidden" id="diffScreen">
+  <div class="screen-title">בחרו רמת קושי</div>
+  <div class="screen-sub">מול ה-AI</div>
+  <div class="diff-btns">
+    <button class="diff-btn easy" data-diff="easy"><span class="diff-icon">😊</span><div><span class="diff-name">קל</span><span class="diff-desc">AI משחק אקראי</span></div></button>
+    <button class="diff-btn medium" data-diff="medium"><span class="diff-icon">🤔</span><div><span class="diff-name">בינוני</span><span class="diff-desc">AI חצי חכם</span></div></button>
+    <button class="diff-btn hard" data-diff="hard"><span class="diff-icon">😈</span><div><span class="diff-name">קשה</span><span class="diff-desc">AI מושלם</span></div></button>
+  </div>
+  <button class="back-btn" id="backToMode">← חזרה</button>
+</div>
+
+<!-- FRIEND -->
+<div class="screen hidden" id="friendScreen">
+  <div class="screen-title">משחק ידידות 🌐</div>
+  <div class="friend-box">
+    <div class="friend-section">
+      <div class="friend-section-title">צור משחק חדש</div>
+      <div class="code-display" id="myCode">----</div>
+      <div class="code-copy-hint">לחץ על הקוד להעתקה</div>
+      <button class="join-btn green-btn" id="createGameBtn">🎲 צור קוד חדש</button>
+      <div class="waiting-msg" id="waitingMsg" style="display:none;">
+        ממתין לחבר <span class="dot-anim"><span>.</span><span>.</span><span>.</span></span>
+      </div>
+    </div>
+    <div class="divider">או</div>
+    <div class="friend-section">
+      <div class="friend-section-title">הצטרף למשחק קיים</div>
+      <input class="code-input" id="joinCodeInput" type="number" placeholder="הכנס קוד" maxlength="4" inputmode="numeric"/>
+      <button class="join-btn" id="joinGameBtn">🤝 הצטרף למשחק</button>
+      <div class="error-msg" id="errorMsg">קוד לא נמצא — בדוק שוב</div>
+    </div>
+  </div>
+  <button class="back-btn" id="backFromFriend">← חזרה</button>
+</div>
+
+<!-- GAME -->
+<div class="screen hidden" id="gameScreen">
+  <div class="container">
+    <div class="header">
+      <h1 class="title">איקס עיגול</h1>
+      <p class="subtitle">משחק אסטרטגי</p>
+      <span class="game-badge" id="gameBadge" style="display:none"></span>
+    </div>
+
+    <div class="timer-wrap" id="timerWrap">
+      <div class="timer-bar" id="timerBar"></div>
+    </div>
+
+    <div class="scoreboard">
+      <div class="score-card x-card active-x" id="scoreXCard">
+        <div class="score-label" id="p1Label">שחקן ✕</div>
+        <span class="score-symbol">✕</span>
+        <span class="score-num" id="xScore">0</span>
+      </div>
+      <div class="score-card draw-card">
+        <div class="score-label">תיקו</div>
+        <span class="score-symbol">—</span>
+        <span class="score-num" id="drawScore">0</span>
+      </div>
+      <div class="score-card o-card" id="scoreOCard">
+        <div class="score-label" id="p2Label">שחקן ○</div>
+        <span class="score-symbol">○</span>
+        <span class="score-num" id="oScore">0</span>
+      </div>
+    </div>
+
+    <div class="status" id="status">תור <span class="highlight-x">✕</span></div>
+
+    <div class="grid-wrapper">
+      <div class="win-banner" id="winBanner"></div>
+      <div class="grid turn-x" id="grid">
+        <div class="cell" data-i="0"></div><div class="cell" data-i="1"></div><div class="cell" data-i="2"></div>
+        <div class="cell" data-i="3"></div><div class="cell" data-i="4"></div><div class="cell" data-i="5"></div>
+        <div class="cell" data-i="6"></div><div class="cell" data-i="7"></div><div class="cell" data-i="8"></div>
+        <svg class="win-line-svg" id="winLineSvg" viewBox="0 0 350 350" preserveAspectRatio="none">
+          <line id="winLine" x1="0" y1="0" x2="0" y2="0" stroke="#fff" stroke-dasharray="400" stroke-dashoffset="400"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- EMOJI CHAT — only in friend mode -->
+    <div class="emoji-bar" id="emojiBar">
+      <button class="emoji-btn" data-emoji="👍">👍</button>
+      <button class="emoji-btn" data-emoji="😂">😂</button>
+      <button class="emoji-btn" data-emoji="🔥">🔥</button>
+      <button class="emoji-btn" data-emoji="😤">😤</button>
+      <button class="emoji-btn" data-emoji="🫡">🫡</button>
+    </div>
+
+    <div class="buttons">
+      <button class="btn home-btn" id="homeBtn">🏠 תפריט</button>
+      <div class="btn-divider"></div>
+      <button class="btn" id="resetBtn">🔄 חדש</button>
+      <div class="btn-divider"></div>
+      <button class="btn clear-btn" id="clearScoreBtn">🗑 אפס</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCdsyLQN-410gxCJqKpjXXfmMCT5kHjpHo",
+  authDomain: "test123-78232.firebaseapp.com",
+  databaseURL: "https://test123-78232-default-rtdb.firebaseio.com",
+  projectId: "test123-78232",
+  storageBucket: "test123-78232.firebasestorage.app",
+  messagingSenderId: "918188496358",
+  appId: "1:918188496358:web:0ba3d296b6c9a1de5b5b91"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+/* ══ AUDIO ══ */
+let audioCtx=null;
+function getCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume();return audioCtx;}
+function soundClick(){try{const ctx=getCtx(),t=ctx.currentTime,len=Math.floor(ctx.sampleRate*0.045),buf=ctx.createBuffer(1,len,ctx.sampleRate),d=buf.getChannelData(0);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,8);const src=ctx.createBufferSource();src.buffer=buf;const f=ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=2200;f.Q.value=0.6;const g=ctx.createGain();g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.045);src.connect(f);f.connect(g);g.connect(ctx.destination);src.start(t);src.stop(t+0.05);}catch(e){}}
+function soundWin(){try{const ctx=getCtx();[523,659,784,1047].forEach((freq,i)=>{const t=ctx.currentTime+i*0.13,osc=ctx.createOscillator(),env=ctx.createGain();osc.connect(env);env.connect(ctx.destination);osc.type='triangle';osc.frequency.value=freq;env.gain.setValueAtTime(0,t);env.gain.linearRampToValueAtTime(0.2,t+0.01);env.gain.exponentialRampToValueAtTime(0.001,t+(i<3?0.2:0.55));osc.start(t);osc.stop(t+(i<3?0.22:0.6));});}catch(e){}}
+function vibrate(ms){try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}}
+
+/* ══ CONFETTI ══ */
+const canvas=document.getElementById('confettiCanvas'),ctx2=canvas.getContext('2d');
+let particles=[],animId=null;
+function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+resizeCanvas();window.addEventListener('resize',resizeCanvas);
+const COLORS=['#ff4d6d','#4cc9f0','#c77dff','#ffd166','#06d6a0','#ff9f1c','#f72585'];
+function mkP(x,y){const a=Math.random()*Math.PI*2,spd=4+Math.random()*9,sz=6+Math.random()*8;return{x,y,vx:Math.cos(a)*spd*(Math.random()<.5?1:-1),vy:-(5+Math.random()*10),gravity:.33,color:COLORS[Math.floor(Math.random()*COLORS.length)],rot:Math.random()*Math.PI*2,rotSpd:(Math.random()-.5)*.2,w:sz,h:sz*(.4+Math.random()*.6),alpha:1,circle:Math.random()<.4};}
+function launchConfetti(wc){stopConfetti();const cx=canvas.width/2,cy=canvas.height/2;for(let i=0;i<160;i++){const p=mkP(cx+(Math.random()-.5)*70,cy+(Math.random()-.5)*50);if(Math.random()<.35)p.color=wc;particles.push(p);}for(let i=0;i<50;i++){const p=mkP(Math.random()*canvas.width,-10);p.vy=1+Math.random()*3;p.vx=(Math.random()-.5)*5;p.gravity=.12;particles.push(p);}loopC();}
+function loopC(){ctx2.clearRect(0,0,canvas.width,canvas.height);particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=p.gravity;p.vx*=.99;p.rot+=p.rotSpd;p.alpha=Math.max(0,p.alpha-.008);ctx2.save();ctx2.translate(p.x,p.y);ctx2.rotate(p.rot);ctx2.globalAlpha=p.alpha;ctx2.fillStyle=p.color;if(p.circle){ctx2.beginPath();ctx2.arc(0,0,p.w/2,0,Math.PI*2);ctx2.fill();}else ctx2.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx2.restore();});particles=particles.filter(p=>p.alpha>0&&p.y<canvas.height+30);if(particles.length)animId=requestAnimationFrame(loopC);else{ctx2.clearRect(0,0,canvas.width,canvas.height);animId=null;}}
+function stopConfetti(){if(animId){cancelAnimationFrame(animId);animId=null;}particles=[];ctx2.clearRect(0,0,canvas.width,canvas.height);}
+
+/* ══ TIMER ══ */
+const TURN_TIME = 15;
+let timerInterval = null, timerLeft = TURN_TIME, timerCallback = null;
+const timerWrap = document.getElementById('timerWrap');
+const timerBar  = document.getElementById('timerBar');
+
+let tickBuffer = null;
+(async ()=>{
+  try{
+    const ctx=getCtx();
+    const b64='UklGRmhWAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAATElTVBoAAABJTkZPSVNGVA4AAABMYXZmNjAuMTYuMTAwAGRhdGEiVgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//8AAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAA//8AAP////////////8AAP//AAD///////////////8AAP7////+/wAA/v8AAP////8AAAAA///+/wAAAAAAAP7/AAD//wAA/v////7//v/+//7////+/wAA//8AAP/////+//7//v///////v/+////AAD//////////////v///////v8AAP/////+/////////wAAAAAAAP/////+/////v8BAP//AAD+//3///////7//f/+/////////wAAAAD+//7//////////v/////////9/////////wAA/v8AAP3////+/////v8AAP7//f/9//3//v///wAA/v////7/AAD///7//v////7/AAD+/wAA///+/////f/////////////////+//3////9//3//v/9//7//f8AAP3//f/9/wAAAAD/////AAAAAP/////9//7//f/9////////////AAD+//7//v/+//7//v/+//3//v/+//7//v/9//7//f/+//7////9////AAD///z/AAAAAP7//v/9//3//f/+//3//////wAA//8AAAAA/v/+//7//f/+/wEA/f/+/////v/+/////v/+///////9/wAA/f/8//7///8AAAAA///9//7//f8AAP3//v8AAP3//v///wAA/v////7//f/8//z//f/8/wAA/v/8/////v/8/////v////7//v/9///////+/wAA/f/9//3//P8AAAAA/f/7///////9//3//v8AAP3//f/+/////f/8/wAA/v/9//7//v/+//7//v/9////AAD//////P////7/AQD///7////+//7//f8BAP3//f/9/wEAAQD+/////f////z//f/8//7//v/+//////8AAP//AAD///7//v///////P/9/wEA/v/9/wEAAQD9//z//f/9//7/AgD+//3//P/8//3//v/+//z//v/9//r//v8AAP3//v/9/////v8AAP7//f////7///////3//f/+//z//f//////AAD+//3//P/9//3//f/8//v//v/+//7//f///wAA/P8AAPz///////3//f/9/////P/+//7//f/9//3//f/9/////v/9/////f////7/+//+//z//f8AAAAA///+//7/AAD//wAA/v/9/////v/+//7//f/+/////f8AAAEA/v/8//3//f/9//7/+//9//3//v/9//3//f///wEA/P8AAAAA/f/8//7//f/+/////v8AAPz//f/+/wEAAAD//wAA/f8CAP///v/8//7//v/+/////P8AAP///v/9/wAA///9/////f/8/wAA/v/8//7//f/9//7///////7//v/9//7////9//3//v/9//7////9/////P/+//3/AAD+//3////+//7//v8AAPz//f8AAP///P/+//////8AAP3//v/+//7//f/+//7//v/9//3////+//////////v//v8AAP3////+//7//P/9//z//////////v/+/wAA/v/+//7//f8CAP///f/9/wAA/v/8/////////////P/9/wAA+////////v/9/wAAAAD//////v/8//z/+//8/////v/9//z//v////7/AAD9///////+/////f8AAP3//v/+//7//v/8/////v////3/AAD///3//v/9//3//v///wAA///9//z////8//7//v///wAA/v8BAP3//P/9//7//v/9/////v/9//7//f/9/////v/+/////v/+//7//P8AAP//AQD+/wAAAQD+/////v8AAP7/AAD9//3//v/+//3/BQD+//3/BgACAPz/BQAAAAMA//8CAAIA/f8JAPP/AAD7/wIAAQD8//////8AAAUA//8DAA4A9f/u/x0AFgDz/wcA/f8CABkA6/8CADQA6P8LABYA6P8CAAgA9P8MAAEA4f8QABAA3P80AOn/9f9HALj/KAD7/83/+P8xAOL/2P8iANr/LgDj/6r/ggCd/yMA+f/B/zAA1P/4//H/GQDO/wAAKwCb/4AAu/+Z/5EANf9eAPX/vf9aANn/qP8LAJYAav8cADUArv+ZADX/AQBTAIX/WQCr/xsAAwCn/xUAGgDw/9j/YgC7/7H/bAB5/28AAQBg/30A9f8CAO3/6//w/ysAJAC3//n/8v8vAAoArP9BAG//WAAzAIH/NQAvAJX/MgAfAGf/NAADALz/OADR/7z/hgDu/7H/HAD//30Avf/m/1AAbf9KALf/0v8aAO3/EwAbABEAm/9AAGUArv8rAN3/HgBJAOP/PQDc/wgA0/+5/y0Aif86ACMA1P8CAIT/ggDE//7/MgCT/3MAu//M/1oAsf9GAOr/BAD3/9L/cgCz/ygA6P/M/3wAaP8yAAkAJQAsAIT/eACa/0gAs/8EAEMAW/+iAJT/LAAUAFT/tACE/wwAPAAAADQABgAQAMf/jADR/zsACABc/1YA7f8NADMAq/9pAPL/zP8GAAkAdgAhAOf/zv9ZALb/v/9vAAgAlwDf/3f//v/x/1UALQAQAK//9f///zcA8v8TAJr/8P8LABgAJACS/zUA9P/H/zIATf8OAPz/3f+oANP/lv+2/7j/1/+NAJT/1v8dAIn/lgC2/1T/1AAv/y0AGwBX/54AwP/k/wcATf9PAKr/OgAd/x8AewDZ/hoA2v7MAbYAqf49AM//iABO/83/6/94/2EAbv/yAML+vv8+AJv/xv80/r///wHtABkAQP8u/gABygFW/j8AewBPAJj/gv5hAUcA5f9y/sUBNwBz/1EAh//xAN/+BQDxATsAkP39AcYBO/9iA7r6AABH/8IDdwVa+1T/Q//hBdr8Gf3nA6b+yQJP+cEFHwX79FQFq/7CAv7+WPuzCNz9Q/5P/igDBQN/+KMGs/1tBB/9JvgLB8X5IgV4Aw/+Yv3xAe4AkfzI/V8DpwDH/rL9YwVlA0H6fQDMAxT53QKe+EUHDwlC8rMJCv+1/af8yv1EBsn+H/9z/+sC1v69ARn++v7SAZf9xAEC/wUB';
+    const raw=atob(b64);
+    const bytes=new Uint8Array(raw.length);
+    for(let i=0;i<raw.length;i++) bytes[i]=raw.charCodeAt(i);
+    tickBuffer=await ctx.decodeAudioData(bytes.buffer);
+  }catch(e){ tickBuffer=null; }
+})();
+
+function soundTick(){
+  try{
+    const ctx=getCtx();
+    if(tickBuffer){
+      const src=ctx.createBufferSource();
+      src.buffer=tickBuffer;
+      const g=ctx.createGain();
+      g.gain.value=0.8;
+      src.connect(g);g.connect(ctx.destination);
+      src.start(ctx.currentTime);
+    } else {
+      // fallback
+      const osc=ctx.createOscillator(),env=ctx.createGain();
+      osc.connect(env);env.connect(ctx.destination);
+      osc.type='sine';osc.frequency.value=880;
+      env.gain.setValueAtTime(0.15,ctx.currentTime);
+      env.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.08);
+      osc.start(ctx.currentTime);osc.stop(ctx.currentTime+0.09);
+    }
+  }catch(e){}
+}
+
+function startTimer(onTimeout){
+  clearTimer();
+  timerCallback = onTimeout;
+  timerLeft = TURN_TIME;
+  timerWrap.style.display = 'block';
+  timerBar.style.width = '100%';
+  timerBar.style.background = 'var(--green)';
+  timerInterval = setInterval(()=>{
+    timerLeft--;
+    const pct = (timerLeft/TURN_TIME)*100;
+    timerBar.style.width = pct+'%';
+    timerBar.style.background = timerLeft>8?'var(--green)':timerLeft>4?'var(--yellow)':'var(--x-color)';
+    // תקתוק + רטט כשמגיע לאדום
+    if(timerLeft<=4 && timerLeft>0){ soundTick(); vibrate(20); }
+    if(timerLeft<=0){ clearTimer(); timerCallback&&timerCallback(); }
+  },1000);
+}
+function clearTimer(){
+  clearInterval(timerInterval);
+  timerInterval=null;
+  timerWrap.style.display='none';
+}
+
+/* ══ WIN LINE ══ */
+// Cell centers in a 350x350 viewBox grid (3 cols, padding=13, gap=9, cell=98)
+// col centers: 13 + 49 = 62, 62+98+9+49=218, 218+98+9+49=374 → scale to viewbox
+// Actually compute from grid pixel layout
+const CELL_CENTERS = (()=>{
+  const pad=13, gap=9, size=98;
+  const centers=[];
+  for(let r=0;r<3;r++) for(let c=0;c<3;c++){
+    // grid is RTL so col 0 is right, flip for SVG
+    const x = pad + (2-c)*(size+gap) + size/2;
+    const y = pad + r*(size+gap) + size/2;
+    centers.push({x,y});
+  }
+  return centers;
+})();
+
+// Map combo indexes to SVG coordinates for the line
+const WINS_LINE = {
+  '012': ()=>({x1:CELL_CENTERS[0].x,y1:CELL_CENTERS[0].y,x2:CELL_CENTERS[2].x,y2:CELL_CENTERS[2].y}),
+  '345': ()=>({x1:CELL_CENTERS[3].x,y1:CELL_CENTERS[3].y,x2:CELL_CENTERS[5].x,y2:CELL_CENTERS[5].y}),
+  '678': ()=>({x1:CELL_CENTERS[6].x,y1:CELL_CENTERS[6].y,x2:CELL_CENTERS[8].x,y2:CELL_CENTERS[8].y}),
+  '036': ()=>({x1:CELL_CENTERS[0].x,y1:CELL_CENTERS[0].y,x2:CELL_CENTERS[6].x,y2:CELL_CENTERS[6].y}),
+  '147': ()=>({x1:CELL_CENTERS[1].x,y1:CELL_CENTERS[1].y,x2:CELL_CENTERS[7].x,y2:CELL_CENTERS[7].y}),
+  '258': ()=>({x1:CELL_CENTERS[2].x,y1:CELL_CENTERS[2].y,x2:CELL_CENTERS[8].x,y2:CELL_CENTERS[8].y}),
+  '048': ()=>({x1:CELL_CENTERS[0].x,y1:CELL_CENTERS[0].y,x2:CELL_CENTERS[8].x,y2:CELL_CENTERS[8].y}),
+  '246': ()=>({x1:CELL_CENTERS[2].x,y1:CELL_CENTERS[2].y,x2:CELL_CENTERS[6].x,y2:CELL_CENTERS[6].y}),
+};
+
+function drawWinLine(combo, color){
+  const svg  = document.getElementById('winLineSvg');
+  const line = document.getElementById('winLine');
+  const gridRect = grid.getBoundingClientRect();
+
+  // Get actual center of first and last cell in combo
+  const c0 = cells[combo[0]].getBoundingClientRect();
+  const c1 = cells[combo[combo.length-1]].getBoundingClientRect();
+
+  const x1 = c0.left + c0.width/2  - gridRect.left;
+  const y1 = c0.top  + c0.height/2 - gridRect.top;
+  const x2 = c1.left + c1.width/2  - gridRect.left;
+  const y2 = c1.top  + c1.height/2 - gridRect.top;
+
+  svg.setAttribute('viewBox',`0 0 ${gridRect.width} ${gridRect.height}`);
+  line.setAttribute('x1', x1);
+  line.setAttribute('y1', y1);
+  line.setAttribute('x2', x2);
+  line.setAttribute('y2', y2);
+  line.setAttribute('stroke', color);
+  line.setAttribute('stroke-dasharray','500');
+  line.setAttribute('stroke-dashoffset','500');
+  line.classList.remove('show');
+  setTimeout(()=>line.classList.add('show'), 50);
+}
+function clearWinLine(){
+  const line=document.getElementById('winLine');
+  line.classList.remove('show');
+  line.setAttribute('x1',0);line.setAttribute('y1',0);line.setAttribute('x2',0);line.setAttribute('y2',0);
+}
+
+/* ══ EMOJI CHAT ══ */
+function showEmojiToast(emoji){
+  const el=document.createElement('div');
+  el.className='emoji-toast';
+  el.textContent=emoji;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1900);
+}
+document.querySelectorAll('.emoji-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const emoji=btn.dataset.emoji;
+    showEmojiToast(emoji);
+    vibrate(40);
+    // שולח אימוגי בלבד — הטיימר ממשיך לרוץ
+    if(friendMode&&gameCode) update(ref(db,`games/${gameCode}`),{emoji,emojiTs:Date.now()});
+  });
+});
+
+/* ══ NAV ══ */
+function goTo(id){document.querySelectorAll('.screen').forEach(s=>s.id===id?s.classList.remove('hidden'):s.classList.add('hidden'));}
+
+/* ══ GAME STATE ══ */
+const WINS=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+let board=Array(9).fill(null),current='X',gameOver=false,aiThinking=false;
+let scores={X:0,O:0,D:0},aiMode=false,difficulty='medium';
+let friendMode=false,mySymbol=null,gameCode=null,gameListener=null;
+let lastEmojiTs=0, lastSyncStatus='', lastSyncCurrent='';
+
+const cells=document.querySelectorAll('.cell');
+const grid=document.getElementById('grid');
+const statusEl=document.getElementById('status');
+const winBanner=document.getElementById('winBanner');
+const emojiBar=document.getElementById('emojiBar');
+
+document.getElementById('playBtn').addEventListener('click',()=>goTo('modeScreen'));
+document.getElementById('btn1P').addEventListener('click',()=>goTo('diffScreen'));
+document.getElementById('btn2P').addEventListener('click',()=>{aiMode=false;friendMode=false;startLocalGame();});
+document.getElementById('btnFriend').addEventListener('click',()=>{goTo('friendScreen');resetFriendUI();});
+document.getElementById('backToMode').addEventListener('click',()=>goTo('modeScreen'));
+document.getElementById('backFromFriend').addEventListener('click',async()=>{if(gameCode)await update(ref(db,`games/${gameCode}`),{status:'left'}).catch(()=>{});cleanupFriendGame();goTo('modeScreen');});
+document.querySelectorAll('.diff-btn').forEach(btn=>{btn.addEventListener('click',()=>{aiMode=true;friendMode=false;difficulty=btn.dataset.diff;startLocalGame();});});
+document.getElementById('homeBtn').addEventListener('click',async()=>{clearTimer();stopConfetti();if(friendMode&&gameCode){await update(ref(db,`games/${gameCode}`),{status:'left'}).catch(()=>{});cleanupFriendGame();}scores={X:0,O:0,D:0};goTo('modeScreen');});
+
+/* FRIEND SETUP */
+function resetFriendUI(){document.getElementById('myCode').textContent='----';document.getElementById('waitingMsg').style.display='none';document.getElementById('joinCodeInput').value='';document.getElementById('errorMsg').classList.remove('show');}
+document.getElementById('myCode').addEventListener('click',()=>{const c=document.getElementById('myCode').textContent;if(c==='----')return;navigator.clipboard.writeText(c).catch(()=>{});document.getElementById('myCode').style.color='var(--yellow)';setTimeout(()=>document.getElementById('myCode').style.color='',800);});
+
+document.getElementById('createGameBtn').addEventListener('click',async()=>{
+  const code=String(Math.floor(1000+Math.random()*9000));
+  gameCode=code;mySymbol='X';
+  document.getElementById('myCode').textContent=code;
+  document.getElementById('waitingMsg').style.display='flex';
+  await set(ref(db,`games/${code}`),{board:Array(9).fill('_'),current:'X',status:'waiting',scores:{X:0,O:0,D:0}});
+  cleanupListener();
+  gameListener=onValue(ref(db,`games/${code}`),snap=>{
+    const d=snap.val();
+    if(d&&d.status==='playing'){cleanupListener();friendMode=true;aiMode=false;scores={...d.scores};startFriendGame(code,'X',d);}
+  });
+});
+
+document.getElementById('joinGameBtn').addEventListener('click',async()=>{
+  const code=document.getElementById('joinCodeInput').value.trim();
+  if(code.length!==4){document.getElementById('errorMsg').classList.add('show');return;}
+  const snap=await get(ref(db,`games/${code}`));
+  if(!snap.exists()||snap.val().status!=='waiting'){document.getElementById('errorMsg').classList.add('show');return;}
+  document.getElementById('errorMsg').classList.remove('show');
+  gameCode=code;mySymbol='O';
+  await update(ref(db,`games/${code}`),{status:'playing'});
+  friendMode=true;aiMode=false;scores={X:0,O:0,D:0};
+  startFriendGame(code,'O',snap.val());
+});
+
+function cleanupListener(){if(gameListener){gameListener();gameListener=null;}}
+function cleanupFriendGame(){cleanupListener();if(gameCode&&mySymbol==='X')remove(ref(db,`games/${gameCode}`)).catch(()=>{});gameCode=null;mySymbol=null;friendMode=false;}
+
+function startFriendGame(code,symbol,data){
+  document.getElementById('p1Label').textContent='✕ שחקן';
+  document.getElementById('p2Label').textContent='○ שחקן';
+  const badge=document.getElementById('gameBadge');
+  badge.style.display='inline-block';badge.className='game-badge friend-badge';
+  badge.textContent=`🌐 קוד: ${code}`;
+  emojiBar.classList.add('show');
+  scores={X:0,O:0,D:0};board=Array(9).fill(null);current='X';gameOver=false;
+  cells.forEach(c=>{c.textContent='';c.className='cell';});
+  grid.className='grid turn-x';winBanner.className='win-banner';clearWinLine();
+  renderScores();setStatus('תור <span class="highlight-x">✕</span>');
+  goTo('gameScreen');
+  cleanupListener();
+  gameListener=onValue(ref(db,`games/${code}`),snap=>{
+    const d=snap.val();if(!d)return;
+    // handle emoji separately — אל תיגע בשאר אם רק אימוגי השתנה
+    if(d.emojiTs&&d.emojiTs!==lastEmojiTs){
+      lastEmojiTs=d.emojiTs;
+      showEmojiToast(d.emoji);
+      vibrate(40);
+      // אם רק emojiTs השתנה — עצור כאן, אל תקרא לsync
+      const keys=Object.keys(d).filter(k=>k!=='emoji'&&k!=='emojiTs');
+      const statusUnchanged = d.status===lastSyncStatus && d.current===lastSyncCurrent;
+      if(statusUnchanged) return;
+    }
+    syncBoardFromDB(d);
+  });
+}
+
+function syncBoardFromDB(data){
+  if(!data)return;
+  const rawBoard=data.board||[];
+  const newBoard=Array(9).fill(null).map((_,i)=>(rawBoard[i]&&rawBoard[i]!=='_')?rawBoard[i]:null);
+  const newCurrent=data.current||'X';
+  const newStatus=data.status||'playing';
+  const newScores=data.scores||{X:0,O:0,D:0};
+  lastSyncStatus=newStatus;
+  lastSyncCurrent=newCurrent;
+
+  if(newStatus==='left'){
+    clearTimer();gameOver=true;grid.classList.remove('turn-x','turn-o');
+    setStatus('<span style="color:var(--yellow);font-weight:900">⚠️ השחקן השני עזב</span>');
+    winBanner.textContent='השחקן עזב';winBanner.style.cssText='color:var(--yellow);border-color:var(--yellow);';
+    winBanner.className='win-banner show';stopConfetti();return;
+  }
+  if(newStatus==='reset'){
+    clearTimer();board=Array(9).fill(null);current='X';gameOver=false;scores={...newScores};
+    cells.forEach(c=>{c.textContent='';c.className='cell';});
+    grid.className='grid turn-x';winBanner.className='win-banner';winBanner.style='';clearWinLine();stopConfetti();
+    setStatus('תור <span class="highlight-x">✕</span>');renderScores();
+    if(mySymbol==='X') startTimer(()=>handleTimeout());
+    return;
+  }
+
+  newBoard.forEach((val,i)=>{
+    const cell=cells[i];
+    if(val&&!board[i]){cell.textContent=val==='X'?'✕':'○';cell.className='cell taken '+(val==='X'?'x-cell':'o-cell');}
+    else if(!val&&board[i]){cell.textContent='';cell.className='cell';}
+  });
+  board=[...newBoard];current=newCurrent;scores={...newScores};renderScores();
+
+  if(newStatus==='win-X'||newStatus==='win-O'){
+    clearTimer();
+    if(!gameOver){
+      gameOver=true;
+      const winner=newStatus==='win-X'?'X':'O';
+      const winCombo=WINS.find(c=>c.every(i=>board[i]===winner));
+      if(winCombo){winCombo.forEach(idx=>cells[idx].classList.add('win-cell'));drawWinLine(winCombo,winner==='X'?'#ff4d6d':'#4cc9f0');}
+      const color=winner==='X'?'#ff4d6d':'#4cc9f0';
+      const isMe=winner===mySymbol;
+      setStatus(`<span style="color:${color};font-weight:900">${isMe?'🎉 ניצחת!':'😔 הפסדת...'}</span>`);
+      winBanner.textContent=isMe?'🎉 ניצחת!':'😔 הפסדת';winBanner.style='';
+      winBanner.className=`win-banner ${winner.toLowerCase()} show`;
+      grid.classList.remove('turn-x','turn-o');
+      if(isMe){launchConfetti(color);soundWin();vibrate([100,50,100]);}
+    }
+  } else if(newStatus==='draw'){
+    clearTimer();
+    if(!gameOver){gameOver=true;setStatus('<span style="color:#888;font-weight:700">תיקו! 🤝</span>');winBanner.textContent='תיקו! 🤝';winBanner.style='';winBanner.className='win-banner show';grid.classList.remove('turn-x','turn-o');}
+  } else if(newStatus==='playing'&&!gameOver){
+    grid.className=`grid ${current==='X'?'turn-x':'turn-o'}`;
+    const myTurn=current===mySymbol;
+    const sym=current==='X'?'<span class="highlight-x">✕</span>':'<span class="highlight-o">○</span>';
+    setStatus(myTurn?`⬅️ תורך! ${sym}`:`תור ${sym}`);
+    clearTimer();
+    if(myTurn) startTimer(()=>handleTimeout());
+  }
+}
+
+async function handleTimeout(){
+  // Pass turn on timeout
+  if(!gameOver&&friendMode&&current===mySymbol){
+    const next=current==='X'?'O':'X';
+    await update(ref(db,`games/${gameCode}`),{current:next,status:'playing'});
+  }
+}
+
+/* ══ LOCAL GAME ══ */
+function startLocalGame(){
+  document.getElementById('p1Label').textContent='שחקן ✕';
+  document.getElementById('p2Label').textContent=aiMode?'🤖 AI':'שחקן ○';
+  const badge=document.getElementById('gameBadge');
+  badge.style.display=aiMode?'inline-block':'none';
+  badge.className='game-badge ai-badge';badge.textContent=aiMode?'🤖 מצב AI':'';
+  emojiBar.classList.remove('show');
+  scores={X:0,O:0,D:0};resetGame();goTo('gameScreen');
+}
+
+function renderScores(){
+  document.getElementById('xScore').textContent=scores.X;
+  document.getElementById('oScore').textContent=scores.O;
+  document.getElementById('drawScore').textContent=scores.D;
+  document.getElementById('scoreXCard').classList.toggle('active-x',current==='X'&&!gameOver);
+  document.getElementById('scoreOCard').classList.toggle('active-o',current==='O'&&!gameOver);
+}
+function setStatus(html){statusEl.innerHTML=html;}
+
+cells.forEach(cell=>{
+  cell.addEventListener('click',()=>{
+    const i=parseInt(cell.dataset.i);
+    if(board[i]||gameOver||aiThinking)return;
+    if(friendMode){if(current!==mySymbol)return;makeFriendMove(i);}
+    else{if(aiMode&&current==='O')return;makeLocalMove(i);if(aiMode&&!gameOver&&current==='O')scheduleAI();}
+  });
+});
+
+async function makeFriendMove(i){
+  if(board[i]||gameOver||current!==mySymbol)return;
+  soundClick();vibrate(30);
+  const newBoard=[...board];newBoard[i]=current;
+  const win=WINS.find(c=>c.every(idx=>newBoard[idx]===current));
+  const draw=!win&&newBoard.every(v=>v);
+  const newScores={...scores};
+  let newStatus='playing',nextTurn=current==='X'?'O':'X';
+  if(win){newScores[current]++;newStatus=`win-${current}`;nextTurn=current;}
+  else if(draw){newScores.D++;newStatus='draw';}
+  // Store with '_' for null to avoid Firebase stripping
+  const storedBoard=newBoard.map(v=>v||'_');
+  await update(ref(db,`games/${gameCode}`),{board:storedBoard,current:nextTurn,status:newStatus,scores:newScores});
+}
+
+document.getElementById('resetBtn').addEventListener('click',async()=>{
+  if(friendMode&&gameCode){stopConfetti();clearTimer();await update(ref(db,`games/${gameCode}`),{board:Array(9).fill('_'),current:'X',status:'reset',scores});}
+  else resetGame();
+});
+document.getElementById('clearScoreBtn').addEventListener('click',async()=>{
+  const ns={X:0,O:0,D:0};
+  if(friendMode&&gameCode){stopConfetti();clearTimer();await update(ref(db,`games/${gameCode}`),{board:Array(9).fill('_'),current:'X',status:'reset',scores:ns});}
+  else{scores=ns;resetGame();}
+});
+
+function makeLocalMove(i){
+  board[i]=current;const cell=cells[i];
+  cell.textContent=current==='X'?'✕':'○';
+  cell.classList.add(current==='X'?'x-cell':'o-cell','taken');
+  soundClick();vibrate(30);
+  const win=checkWin();
+  if(win){
+    win.forEach(idx=>cells[idx].classList.add('win-cell'));
+    const color=current==='X'?'#ff4d6d':'#4cc9f0';
+    drawWinLine(win,color);
+    gameOver=true;scores[current]++;renderScores();
+    clearTimer();
+    const sym=current==='X'?'✕':'○';
+    const msg=aiMode?(current==='X'?'✕ ניצחת! 🎉':'🤖 AI ניצח!'):`${sym} מנצח! 🎉`;
+    setStatus(`<span style="color:${color};font-weight:900">${msg}</span>`);
+    winBanner.textContent=current==='X'?'✕ ניצח!':'○ ניצח!';winBanner.className=`win-banner ${current==='X'?'x':'o'} show`;
+    grid.classList.remove('turn-x','turn-o');
+    launchConfetti(color);soundWin();vibrate([100,50,100]);
+  } else if(board.every(v=>v)){
+    gameOver=true;scores.D++;renderScores();clearTimer();
+    setStatus('<span style="color:#888;font-weight:700">תיקו! 🤝</span>');
+    winBanner.textContent='תיקו!';winBanner.className='win-banner show';grid.classList.remove('turn-x','turn-o');
+  } else {
+    current=current==='X'?'O':'X';
+    grid.className=`grid ${current==='X'?'turn-x':'turn-o'}`;
+    const sym=current==='X'?'<span class="highlight-x">✕</span>':'<span class="highlight-o">○</span>';
+    setStatus(aiMode&&current==='O'?'🤖 ה-AI חושב...':`תור ${sym}`);
+    // Timer for local 2-player
+    if(!aiMode){clearTimer();startTimer(()=>{current=current==='X'?'O':'X';grid.className=`grid ${current==='X'?'turn-x':'turn-o'}`;const s=current==='X'?'<span class="highlight-x">✕</span>':'<span class="highlight-o">○</span>';setStatus(`תור ${s}`);startTimer(()=>{});});}
+  }
+}
+
+function scheduleAI(){aiThinking=true;setTimeout(()=>{if(gameOver){aiThinking=false;return;}const mv=getAIMove();if(mv!==-1)makeLocalMove(mv);aiThinking=false;},1500);}
+function getAIMove(){if(difficulty==='easy')return randomMove();if(difficulty==='medium')return Math.random()<.5?bestMove():randomMove();return bestMove();}
+function randomMove(){const e=board.reduce((a,v,i)=>v===null?[...a,i]:a,[]);return e.length?e[Math.floor(Math.random()*e.length)]:-1;}
+function bestMove(){let best=-Infinity,move=-1;for(let i=0;i<9;i++){if(board[i])continue;board[i]='O';const s=minimax(board,0,false);board[i]=null;if(s>best){best=s;move=i;}}return move;}
+function minimax(b,d,isMax){if(WINS.some(c=>c.every(i=>b[i]==='O')))return 10-d;if(WINS.some(c=>c.every(i=>b[i]==='X')))return d-10;if(b.every(v=>v))return 0;if(isMax){let best=-Infinity;for(let i=0;i<9;i++){if(!b[i]){b[i]='O';best=Math.max(best,minimax(b,d+1,false));b[i]=null;}}return best;}else{let best=Infinity;for(let i=0;i<9;i++){if(!b[i]){b[i]='X';best=Math.min(best,minimax(b,d+1,true));b[i]=null;}}return best;}}
+function checkWin(){for(const c of WINS)if(c.every(i=>board[i]===current))return c;return null;}
+
+function resetGame(){
+  clearTimer();stopConfetti();clearWinLine();
+  board=Array(9).fill(null);gameOver=false;current='X';aiThinking=false;
+  cells.forEach(c=>{c.textContent='';c.className='cell';});
+  grid.className='grid turn-x';setStatus('תור <span class="highlight-x">✕</span>');
+  winBanner.className='win-banner';winBanner.style='';renderScores();
+}
+</script>
+</body>
+</html>
